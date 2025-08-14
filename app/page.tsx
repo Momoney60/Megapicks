@@ -1,426 +1,264 @@
--- MegaPicks Database Schema for Supabase (PostgreSQL)
+import React, { useState, useEffect } from 'react';
+import { Calendar, Trophy, TrendingUp, Users, Home, ChevronRight, Lock, Unlock, AlertCircle, DollarSign, Clock } from 'lucide-react';
 
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_cron";
+// Mock data for demonstration
+const mockGames = [
+  { id: 1, home: 'KC', away: 'BUF', spread: -2.5, total: 48.5, homeScore: 0, awayScore: 0, kickoff: '2025-01-19T13:00:00', status: 'scheduled' },
+  { id: 2, home: 'DAL', away: 'NYG', spread: -7, total: 44, homeScore: 0, awayScore: 0, kickoff: '2025-01-19T13:00:00', status: 'scheduled' },
+  { id: 3, home: 'GB', away: 'CHI', spread: -3.5, total: 41.5, homeScore: 0, awayScore: 0, kickoff: '2025-01-19T16:25:00', status: 'scheduled' },
+];
 
--- Users table (extends Supabase auth.users)
-CREATE TABLE public.users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    handle VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    avatar_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+const mockContestants = [
+  { id: 1, handle: 'GridironGuru', atsPoints: 12.5, parlayPoints: 6, totalPoints: 18.5, helmet: { shell: '#fc440f', facemask: '#ffffff', stripe: '#000000', decal: '⚡' } },
+  { id: 2, handle: 'PickEmPro', atsPoints: 11, parlayPoints: 3, totalPoints: 14, helmet: { shell: '#00bcd4', facemask: '#ffffff', stripe: '#ffffff', decal: '★' } },
+  { id: 3, handle: 'BettingBeast', atsPoints: 10.5, parlayPoints: 9, totalPoints: 19.5, helmet: { shell: '#a4e600', facemask: '#000000', stripe: '#000000', decal: '💀' } },
+];
 
--- Leagues table
-CREATE TABLE public.leagues (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) NOT NULL,
-    code VARCHAR(20) UNIQUE NOT NULL,
-    entry_fee DECIMAL(10,2) DEFAULT 20.00,
-    weeks_count INT DEFAULT 18,
-    season_year INT NOT NULL,
-    created_by UUID REFERENCES public.users(id),
-    settings JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+// Team colors for visual appeal
+const teamColors = {
+  KC: '#E31837', BUF: '#00338D', DAL: '#003594', NYG: '#0B2265',
+  GB: '#203731', CHI: '#0B162A', SF: '#AA0000', SEA: '#002244'
+};
 
--- Seasons table
-CREATE TABLE public.seasons (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    league_id UUID REFERENCES public.leagues(id) ON DELETE CASCADE,
-    year INT NOT NULL,
-    week_count INT DEFAULT 18,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(league_id, year)
-);
+// Mini Helmet Component
+const MiniHelmet = ({ config, size = 'sm', glowing = false }) => {
+  const sizeClasses = {
+    sm: 'w-6 h-6',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12'
+  };
+  
+  return (
+    <div className={`${sizeClasses[size]} relative inline-flex items-center justify-center ${glowing ? 'animate-pulse' : ''}`}>
+      <svg viewBox="0 0 40 40" className="w-full h-full">
+        <ellipse cx="20" cy="20" rx="18" ry="16" fill={config.shell} stroke={config.facemask} strokeWidth="1"/>
+        <rect x="18" y="5" width="4" height="30" fill={config.stripe} opacity="0.6"/>
+        <text x="20" y="25" fontSize="14" textAnchor="middle" fill={config.facemask}>{config.decal}</text>
+      </svg>
+    </div>
+  );
+};
 
--- Contestants (users in a league/season)
-CREATE TABLE public.contestants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-    league_id UUID REFERENCES public.leagues(id) ON DELETE CASCADE,
-    season_id UUID REFERENCES public.seasons(id) ON DELETE CASCADE,
-    helmet_config JSONB DEFAULT '{"shell": "#fc440f", "facemask": "#ffffff", "stripe": "#000000", "decal": "lightning"}',
-    is_paid BOOLEAN DEFAULT false,
-    fake_money_balance DECIMAL(10,2) DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, season_id)
-);
+// Mini Field Component
+const MiniField = ({ possession, yardLine, down, distance, redZone, size = 'sm' }) => {
+  const ballPosition = yardLine ? (yardLine / 100) * 100 : 50;
+  
+  return (
+    <div className="relative bg-green-700 rounded-sm overflow-hidden" style={{ height: size === 'sm' ? '24px' : '40px', width: '100%' }}>
+      {/* End zones */}
+      <div className="absolute left-0 top-0 bottom-0 w-[10%] bg-blue-800 border-r border-white"></div>
+      <div className="absolute right-0 top-0 bottom-0 w-[10%] bg-red-800 border-l border-white"></div>
+      
+      {/* Yard lines */}
+      {[20, 30, 40, 50, 60, 70, 80].map(yard => (
+        <div key={yard} className="absolute top-0 bottom-0 w-px bg-white opacity-40" style={{ left: `${yard}%` }}></div>
+      ))}
+      
+      {/* Ball marker */}
+      {possession && (
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-yellow-400 rounded-full shadow-lg transition-all duration-500"
+          style={{ left: `${ballPosition}%` }}
+        ></div>
+      )}
+      
+      {/* Down & Distance (only show on larger sizes or in red zone) */}
+      {size !== 'sm' && down && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-white text-xs font-mono">
+          {down}&{distance}
+        </div>
+      )}
+    </div>
+  );
+};
 
--- Games table (NFL games)
-CREATE TABLE public.games (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    espn_game_id VARCHAR(50) UNIQUE,
-    season_year INT NOT NULL,
-    week INT NOT NULL,
-    game_type VARCHAR(20) DEFAULT 'regular', -- regular, playoff, etc
-    home_team VARCHAR(5) NOT NULL,
-    away_team VARCHAR(5) NOT NULL,
-    kickoff_time TIMESTAMPTZ NOT NULL,
+// Game Card Component
+const GameCard = ({ game, onPickATS, onToggleParlay, atsPick, inParlay, locked }) => {
+  return (
+    <div className={`bg-gray-900 rounded-lg p-4 border ${locked ? 'border-gray-700 opacity-60' : 'border-gray-700'}`}>
+      {locked && (
+        <div className="flex items-center gap-1 text-red-400 text-sm mb-2">
+          <Lock className="w-3 h-3" />
+          <span className="font-semibold">LOCKED</span>
+        </div>
+      )}
+      
+      <div className="flex justify-between items-center mb-3">
+        <div className="text-xs text-gray-400">
+          {new Date(game.kickoff).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
+        </div>
+        <div className="text-xs text-gray-400">O/U {game.total}</div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        {/* Away Team */}
+        <button
+          onClick={() => !locked && onPickATS(game.id, game.away)}
+          disabled={locked}
+          className={`p-3 rounded-lg transition-all ${
+            atsPick === game.away 
+              ? 'bg-orange-600 border-2 border-orange-400'
+              : 'bg-gray-800 hover:bg-gray-700 border-2 border-transparent'
+          } ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <div className="font-bold text-lg" style={{ color: teamColors[game.home] || '#ffffff' }}>
+            {game.home}
+          </div>
+          <div className="text-sm text-gray-300">
+            {game.spread < 0 ? game.spread : `+${Math.abs(game.spread)}`}
+          </div>
+        </button>
+      </div>
+      
+      {/* Parlay Toggle */}
+      <button
+        onClick={() => !locked && onToggleParlay(game.id)}
+        disabled={locked}
+        className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold transition-all ${
+          inParlay
+            ? 'bg-green-600 text-white'
+            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+        } ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        {inParlay ? '🔗 In Parlay' : 'Add to Parlay'}
+      </button>
+    </div>
+  );
+};
+
+// Main App Component
+export default function MegaPicks() {
+  const [currentPage, setCurrentPage] = useState('headquarters');
+  const [atsPicks, setAtsPicks] = useState({});
+  const [parlayPicks, setParlayPicks] = useState(new Set());
+  const [isLocked, setIsLocked] = useState(false);
+  const [timeToLock, setTimeToLock] = useState('');
+  const [weeklyPot, setWeeklyPot] = useState(520);
+  const [megaPot, setMegaPot] = useState(1800);
+
+  // Calculate time to lock
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const lockTime = new Date('2025-01-19T13:00:00');
+      const now = new Date();
+      const diff = lockTime - now;
+      
+      if (diff <= 0) {
+        setIsLocked(true);
+        setTimeToLock('LOCKED');
+      } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeToLock(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      }
+    }, 1000);
     
-    -- Betting lines (snapshot at pick open)
-    spread_open DECIMAL(3,1),
-    total_open DECIMAL(4,1),
-    home_ml_open INT,
-    away_ml_open INT,
-    
-    -- Current lines
-    spread_current DECIMAL(3,1),
-    total_current DECIMAL(4,1),
-    home_ml_current INT,
-    away_ml_current INT,
-    
-    -- Live game data
-    status VARCHAR(20) DEFAULT 'scheduled', -- scheduled, in_progress, final
-    quarter VARCHAR(10),
-    time_remaining VARCHAR(10),
-    home_score INT DEFAULT 0,
-    away_score INT DEFAULT 0,
-    possession VARCHAR(5),
-    yard_line INT,
-    down INT,
-    distance INT,
-    is_redzone BOOLEAN DEFAULT false,
-    last_play TEXT,
-    
-    -- Results
-    is_complete BOOLEAN DEFAULT false,
-    winning_team VARCHAR(5),
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+    return () => clearInterval(timer);
+  }, []);
 
--- Create indexes for games table
-CREATE INDEX idx_games_week ON public.games(season_year, week);
-CREATE INDEX idx_games_kickoff ON public.games(kickoff_time);
+  const handleATSPick = (gameId, team) => {
+    setAtsPicks(prev => ({ ...prev, [gameId]: team }));
+  };
 
--- Picks table (ATS picks)
-CREATE TABLE public.picks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contestant_id UUID REFERENCES public.contestants(id) ON DELETE CASCADE,
-    game_id UUID REFERENCES public.games(id) ON DELETE CASCADE,
-    week INT NOT NULL,
-    pick VARCHAR(5) NOT NULL, -- team abbreviation
-    spread_at_pick DECIMAL(3,1), -- snapshot of spread when picked
-    
-    -- Results
-    result VARCHAR(10), -- win, loss, push, pending
-    points_earned DECIMAL(2,1) DEFAULT 0,
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(contestant_id, game_id)
-);
+  const handleParlayToggle = (gameId) => {
+    setParlayPicks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gameId)) {
+        newSet.delete(gameId);
+      } else {
+        newSet.add(gameId);
+      }
+      return newSet;
+    });
+  };
 
--- Parlays table
-CREATE TABLE public.parlays (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contestant_id UUID REFERENCES public.contestants(id) ON DELETE CASCADE,
-    week INT NOT NULL,
-    season_id UUID REFERENCES public.seasons(id) ON DELETE CASCADE,
-    leg_count INT NOT NULL CHECK (leg_count >= 3),
-    
-    -- Results
-    status VARCHAR(20) DEFAULT 'pending', -- pending, hit, busted
-    points_earned INT DEFAULT 0,
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(contestant_id, season_id, week)
-);
+  const canSubmit = Object.keys(atsPicks).length === mockGames.length && parlayPicks.size >= 3;
 
--- Parlay legs table
-CREATE TABLE public.parlay_legs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    parlay_id UUID REFERENCES public.parlays(id) ON DELETE CASCADE,
-    game_id UUID REFERENCES public.games(id) ON DELETE CASCADE,
-    pick VARCHAR(5) NOT NULL, -- team abbreviation
-    ml_at_pick INT, -- moneyline odds when picked
-    
-    -- Results
-    result VARCHAR(10), -- win, loss, pending
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(parlay_id, game_id)
-);
+  const renderHeadquarters = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-6 text-white">
+        <h1 className="text-3xl font-black mb-2">MEGAPICKS HQ</h1>
+        <div className="flex items-center gap-2 text-lg">
+          <Clock className="w-5 h-5" />
+          <span>Picks lock in: <span className="font-mono font-bold">{timeToLock}</span></span>
+        </div>
+      </div>
 
--- Week submissions tracking
-CREATE TABLE public.week_submissions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contestant_id UUID REFERENCES public.contestants(id) ON DELETE CASCADE,
-    season_id UUID REFERENCES public.seasons(id) ON DELETE CASCADE,
-    week INT NOT NULL,
-    
-    -- Submission tracking
-    submitted_at TIMESTAMPTZ,
-    lock_time TIMESTAMPTZ NOT NULL,
-    minutes_late INT DEFAULT 0,
-    late_penalty DECIMAL(3,1) DEFAULT 0,
-    
-    -- Scoring
-    ats_points DECIMAL(4,1) DEFAULT 0,
-    parlay_points INT DEFAULT 0,
-    total_points DECIMAL(4,1) DEFAULT 0,
-    
-    -- Status
-    is_complete BOOLEAN DEFAULT false,
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(contestant_id, season_id, week)
-);
+      {/* Pots */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-gray-900 rounded-lg p-4 border border-green-500">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-400 text-sm">Weekly Pot</span>
+            <DollarSign className="w-4 h-4 text-green-500" />
+          </div>
+          <div className="text-2xl font-bold text-green-400">${weeklyPot}</div>
+        </div>
+        <div className="bg-gray-900 rounded-lg p-4 border border-yellow-500">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-400 text-sm">Mega Pot</span>
+            <Trophy className="w-4 h-4 text-yellow-500" />
+          </div>
+          <div className="text-2xl font-bold text-yellow-400">${megaPot}          </div>
+        </div>
+      </div>
 
--- Standings table
-CREATE TABLE public.standings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contestant_id UUID REFERENCES public.contestants(id) ON DELETE CASCADE,
-    season_id UUID REFERENCES public.seasons(id) ON DELETE CASCADE,
-    
-    -- ATS stats
-    ats_wins INT DEFAULT 0,
-    ats_losses INT DEFAULT 0,
-    ats_pushes INT DEFAULT 0,
-    ats_points DECIMAL(5,1) DEFAULT 0,
-    
-    -- Parlay stats
-    parlays_hit INT DEFAULT 0,
-    parlays_busted INT DEFAULT 0,
-    parlay_points INT DEFAULT 0,
-    
-    -- Totals
-    total_points DECIMAL(6,1) DEFAULT 0,
-    rank INT,
-    
-    -- Weekly breakdown (JSON array of weekly points)
-    weekly_points JSONB DEFAULT '[]',
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(contestant_id, season_id)
-);
+      {/* League Notes */}
+      <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+        <div className="text-sm text-gray-400 mb-2">LEAGUE NOTES</div>
+        <p className="text-gray-200">Week 18 is here! Remember: all picks lock at Sunday 1PM ET. Don't forget to set your parlay (minimum 3 legs). Good luck!</p>
+      </div>
 
--- Pots table
-CREATE TABLE public.pots (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    season_id UUID REFERENCES public.seasons(id) ON DELETE CASCADE,
-    week INT,
-    pot_type VARCHAR(20) NOT NULL, -- weekly, mega
-    amount DECIMAL(10,2) DEFAULT 0,
-    is_rolled_over BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(season_id, week, pot_type)
-);
+      {/* Upcoming Games Preview */}
+      <div className="space-y-3">
+        <div className="text-lg font-bold text-gray-200">This Week's Games</div>
+        {mockGames.slice(0, 3).map(game => (
+          <div key={game.id} className="bg-gray-900 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-400">
+                {new Date(game.kickoff).toLocaleString('en-US', { weekday: 'short', hour: 'numeric' })}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold" style={{ color: teamColors[game.away] }}>{game.away}</span>
+                <span className="text-gray-500">@</span>
+                <span className="font-bold" style={{ color: teamColors[game.home] }}>{game.home}</span>
+              </div>
+            </div>
+            <div className="text-sm text-gray-400">
+              {game.home} {game.spread < 0 ? game.spread : `+${game.spread}`}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
 
--- Payouts table
-CREATE TABLE public.payouts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contestant_id UUID REFERENCES public.contestants(id) ON DELETE CASCADE,
-    pot_id UUID REFERENCES public.pots(id) ON DELETE CASCADE,
-    amount DECIMAL(10,2) NOT NULL,
-    payout_type VARCHAR(20) NOT NULL, -- weekly_winner, season_champion
-    week INT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- League notes/announcements
-CREATE TABLE public.league_notes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    league_id UUID REFERENCES public.leagues(id) ON DELETE CASCADE,
-    title VARCHAR(200),
-    content TEXT NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_by UUID REFERENCES public.users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Trophy/achievements table
-CREATE TABLE public.trophies (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contestant_id UUID REFERENCES public.contestants(id) ON DELETE CASCADE,
-    season_id UUID REFERENCES public.seasons(id) ON DELETE CASCADE,
-    trophy_type VARCHAR(50) NOT NULL, -- weekly_winner, perfect_card, parlay_king, etc
-    week INT,
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(contestant_id, season_id, trophy_type, week)
-);
-
--- Line snapshots (for tracking line movement)
-CREATE TABLE public.line_snapshots (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    game_id UUID REFERENCES public.games(id) ON DELETE CASCADE,
-    spread DECIMAL(3,1),
-    total DECIMAL(4,1),
-    home_ml INT,
-    away_ml INT,
-    snapshot_type VARCHAR(20) NOT NULL, -- open, current, lock
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create indexes for performance
-CREATE INDEX idx_picks_contestant_week ON public.picks(contestant_id, week);
-CREATE INDEX idx_parlays_contestant_week ON public.parlays(contestant_id, week);
-CREATE INDEX idx_standings_season ON public.standings(season_id, total_points DESC);
-CREATE INDEX idx_week_submissions ON public.week_submissions(season_id, week);
-
--- Row Level Security (RLS) Policies
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.leagues ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.contestants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.picks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.parlays ENABLE ROW LEVEL SECURITY;
-
--- Basic RLS policies (expand as needed)
-CREATE POLICY "Users can view all users" ON public.users FOR SELECT USING (true);
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "League members can view league" ON public.leagues FOR SELECT 
-    USING (EXISTS (
-        SELECT 1 FROM public.contestants 
-        WHERE contestants.league_id = leagues.id 
-        AND contestants.user_id = auth.uid()
-    ));
-
-CREATE POLICY "Contestants can view own picks" ON public.picks FOR SELECT 
-    USING (contestant_id IN (
-        SELECT id FROM public.contestants WHERE user_id = auth.uid()
-    ));
-
-CREATE POLICY "Contestants can insert own picks" ON public.picks FOR INSERT 
-    WITH CHECK (contestant_id IN (
-        SELECT id FROM public.contestants WHERE user_id = auth.uid()
-    ));
-
--- Functions for game logic
-
--- Function to calculate weekly standings
-CREATE OR REPLACE FUNCTION calculate_weekly_standings(p_season_id UUID, p_week INT)
-RETURNS void AS $$
-BEGIN
-    -- Update week_submissions with calculated points
-    UPDATE week_submissions ws
-    SET 
-        ats_points = (
-            SELECT COALESCE(SUM(points_earned), 0)
-            FROM picks p
-            WHERE p.contestant_id = ws.contestant_id
-            AND p.week = p_week
-        ),
-        parlay_points = (
-            SELECT COALESCE(points_earned, 0)
-            FROM parlays par
-            WHERE par.contestant_id = ws.contestant_id
-            AND par.week = p_week
-        ),
-        total_points = ats_points + parlay_points - late_penalty
-    WHERE ws.season_id = p_season_id
-    AND ws.week = p_week;
-    
-    -- Update season standings
-    UPDATE standings s
-    SET 
-        ats_points = (
-            SELECT COALESCE(SUM(ats_points), 0)
-            FROM week_submissions
-            WHERE contestant_id = s.contestant_id
-            AND season_id = p_season_id
-        ),
-        parlay_points = (
-            SELECT COALESCE(SUM(parlay_points), 0)
-            FROM week_submissions
-            WHERE contestant_id = s.contestant_id
-            AND season_id = p_season_id
-        ),
-        total_points = ats_points + parlay_points
-    WHERE s.season_id = p_season_id;
-    
-    -- Update rankings
-    WITH ranked AS (
-        SELECT id, ROW_NUMBER() OVER (ORDER BY total_points DESC) as new_rank
-        FROM standings
-        WHERE season_id = p_season_id
-    )
-    UPDATE standings
-    SET rank = ranked.new_rank
-    FROM ranked
-    WHERE standings.id = ranked.id;
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to grade ATS picks
-CREATE OR REPLACE FUNCTION grade_ats_pick(p_pick_id UUID)
-RETURNS void AS $$
-DECLARE
-    v_game games%ROWTYPE;
-    v_pick picks%ROWTYPE;
-    v_spread DECIMAL(3,1);
-    v_result VARCHAR(10);
-    v_points DECIMAL(2,1);
-BEGIN
-    SELECT * INTO v_pick FROM picks WHERE id = p_pick_id;
-    SELECT * INTO v_game FROM games WHERE id = v_pick.game_id;
-    
-    IF v_game.is_complete THEN
-        v_spread := v_pick.spread_at_pick;
+      {/* Last Week's Winner */}
+      <div className="bg-gradient-to-r from-yellow-600/20 to-yellow-500/20 rounded-lg p-4 border border-yellow-500/50">
+        <div className="text-sm text-yellow-400 mb-2">LAST WEEK'S CHAMPION</div>
+        <div className="flex items-center gap-3">
+          <MiniHelmet config={mockContestants[2].helmet} size="md" glowing={true} />
+          <div>
+            <div className="font-bold text-lg">{mockContestants[2].handle}</div>
+            <div className="text-sm text-gray-400">19.5 points • Won $260</div>
+          </div>
+        </div> 
+              : 'bg-gray-800 hover:bg-gray-700 border-2 border-transparent'
+          } ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <div className="font-bold text-lg" style={{ color: teamColors[game.away] || '#ffffff' }}>
+            {game.away}
+          </div>
+          <div className="text-sm text-gray-300">
+            {game.spread > 0 ? `+${game.spread}` : game.spread}
+          </div>
+        </button>
         
-        -- Calculate ATS result
-        IF v_pick.pick = v_game.home_team THEN
-            -- Picked home team
-            IF v_game.home_score + v_spread > v_game.away_score THEN
-                v_result := 'win';
-                v_points := 1.0;
-            ELSIF v_game.home_score + v_spread = v_game.away_score THEN
-                v_result := 'push';
-                v_points := 0.5;
-            ELSE
-                v_result := 'loss';
-                v_points := 0.0;
-            END IF;
-        ELSE
-            -- Picked away team
-            IF v_game.away_score + (-v_spread) > v_game.home_score THEN
-                v_result := 'win';
-                v_points := 1.0;
-            ELSIF v_game.away_score + (-v_spread) = v_game.home_score THEN
-                v_result := 'push';
-                v_points := 0.5;
-            ELSE
-                v_result := 'loss';
-                v_points := 0.0;
-            END IF;
-        END IF;
-        
-        UPDATE picks 
-        SET result = v_result, points_earned = v_points
-        WHERE id = p_pick_id;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger to update timestamps
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER update_leagues_updated_at BEFORE UPDATE ON public.leagues
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER update_contestants_updated_at BEFORE UPDATE ON public.contestants
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER update_games_updated_at BEFORE UPDATE ON public.games
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+        {/* Home Team */}
+        <button
+          onClick={() => !locked && onPickATS(game.id, game.home)}
+          disabled={locked}
+          className={`p-3 rounded-lg transition-all ${
+            atsPick === game.home 
+              ? 'bg-orange-600 border-2 border-orange-400'
