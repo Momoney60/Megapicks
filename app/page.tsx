@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Calendar, Trophy, TrendingUp, Users, Home, Clock, DollarSign, Lock, Unlock, AlertCircle } from 'lucide-react'
 import type { Game, Contestant } from './types'
 import { MiniHelmet, GameCard, teamColors } from './components'
-import { supabase } from '@/lib/supabase'
+// No direct Supabase usage on the client for games list
 
 // Mock data for testing
 const mockGames: Game[] = [
@@ -61,29 +61,31 @@ export default function MegaPicks() {
     return () => clearInterval(timer)
   }, [earliestKick])
 
-  // Load games from Supabase
+  // Load games via API (no cache) and poll during live windows
   useEffect(() => {
-    ;(async function loadGames() {
+    let cancel = false
+
+    async function loadGamesFromApi() {
       try {
         setLoading(true)
-        const { data, error } = await supabase
-          .from('games')
-          .select('*')
-          .eq('week', 1)
-          .order('kickoff_time', { ascending: true })
-
-        if (error) {
-          console.error('Supabase error loading games:', error)
-        }
-        if (data && data.length > 0) {
-          setGames(data as Game[])
+        const res = await fetch('/api/games', { cache: 'no-store' })
+        if (!res.ok) throw new Error(`Failed: ${res.status}`)
+        const payload = await res.json()
+        if (!cancel && payload?.games) {
+          setGames(payload.games as Game[])
         }
       } catch (err) {
-        console.error('Error loading games:', err)
+        console.error('API error loading games:', err)
       } finally {
-        setLoading(false)
+        if (!cancel) setLoading(false)
       }
-    })()
+    }
+
+    loadGamesFromApi()
+
+    // Poll every 20s during run time
+    const id = setInterval(loadGamesFromApi, 20000)
+    return () => { cancel = true; clearInterval(id) }
   }, [])
 
   const handleATSPick = (gameId: string, team: string) => {

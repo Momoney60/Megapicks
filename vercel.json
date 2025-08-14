@@ -1,0 +1,5 @@
+{
+	"crons": [
+		{ "path": "/api/games/upsert", "schedule": "*/5 * * * *" }
+	]
+}

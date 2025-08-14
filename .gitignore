@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+.next/
+# Env
+.env*
+# Logs
+npm-debug.log*
+
