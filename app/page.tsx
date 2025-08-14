@@ -215,4 +215,230 @@ export default function MegaPicks() {
                 {parlayPicks.size}/3+
               </div>
               {parlayPicks.size < 3 && (
-                <AlertCircle class
+                <AlertCircle className="w-4 h-4 text-red-400" />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {games.map(game => (
+          <GameCard
+            key={game.id}
+            game={game}
+            onPickATS={handleATSPick}
+            onToggleParlay={handleParlayToggle}
+            atsPick={atsPicks[game.id]}
+            inParlay={parlayPicks.has(game.id)}
+            locked={isLocked}
+          />
+        ))}
+      </div>
+
+      {parlayPicks.size > 0 && (
+        <div className="bg-gradient-to-r from-green-900/50 to-green-800/50 rounded-lg p-4 border border-green-500">
+          <div className="text-sm text-green-400 mb-2">YOUR PARLAY ({parlayPicks.size} LEGS)</div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from(parlayPicks).map(gameId => {
+              const game = games.find(g => g.id === gameId)
+              return game ? (
+                <div key={gameId} className="bg-green-800 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                  <span>🔗</span>
+                  <span>{game.home_team} vs {game.away_team}</span>
+                </div>
+              ) : null
+            })}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={submitPicks}
+        disabled={!canSubmit || isLocked}
+        className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
+          canSubmit && !isLocked
+            ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-500 hover:to-red-500'
+            : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        {isLocked ? 'Picks Locked' : canSubmit ? 'Submit Picks' : 'Complete All Picks'}
+      </button>
+    </div>
+  )
+
+  const renderRankings = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-700">
+        <h2 className="text-xl font-bold mb-4">Week Rankings</h2>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-xs text-gray-400 border-b border-gray-800">
+                <th className="pb-2">Rank</th>
+                <th className="pb-2">Player</th>
+                <th className="pb-2">ATS</th>
+                <th className="pb-2">Parlay</th>
+                <th className="pb-2">Total</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {contestants.sort((a, b) => b.total_points - a.total_points).map((contestant, idx) => (
+                <tr key={contestant.id} className={`border-b border-gray-800 ${idx === 0 ? 'bg-yellow-900/20' : ''}`}>
+                  <td className="py-3">
+                    <div className="font-bold">{idx + 1}</div>
+                  </td>
+                  <td className="py-3">
+                    <div className="flex items-center gap-2">
+                      <MiniHelmet config={contestant.helmet_config} glowing={idx === 0} />
+                      <span className="font-semibold">{contestant.handle}</span>
+                    </div>
+                  </td>
+                  <td className="py-3">{contestant.ats_points}</td>
+                  <td className="py-3">{contestant.parlay_points}</td>
+                  <td className="py-3 font-bold">{contestant.total_points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderLive = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-700">
+        <h2 className="text-xl font-bold mb-4">Live Games</h2>
+        
+        <div className="text-center py-12 text-gray-500">
+          <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <div>No games currently live</div>
+          <div className="text-sm mt-1">Next games start {timeToLock}</div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderTheChase = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-700">
+        <h2 className="text-xl font-bold mb-4">#TheChase - Season Standings</h2>
+        
+        <div className="space-y-4">
+          {contestants.sort((a, b) => b.total_points - a.total_points).map((contestant, idx) => {
+            const maxPoints = Math.max(...contestants.map(c => c.total_points))
+            const percentage = (contestant.total_points / maxPoints) * 100
+            
+            return (
+              <div key={contestant.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MiniHelmet config={contestant.helmet_config} glowing={idx === 0} />
+                    <span className="font-semibold">{contestant.handle}</span>
+                  </div>
+                  <span className="font-bold text-lg">{contestant.total_points} pts</span>
+                </div>
+                <div className="relative h-8 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className={`absolute left-0 top-0 h-full transition-all duration-1000 ${
+                      idx === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' :
+                      idx === contestants.length - 1 ? 'bg-gradient-to-r from-red-600 to-red-500' :
+                      'bg-gradient-to-r from-blue-600 to-blue-500'
+                    }`}
+                    style={{ width: `${percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+
+  const pages: { [key: string]: JSX.Element } = {
+    headquarters: renderHeadquarters(),
+    picks: renderPicks(),
+    rankings: renderRankings(),
+    live: renderLive(),
+    chase: renderTheChase()
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      <nav className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-6">
+              <div className="text-2xl font-black bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                MEGAPICKS
+              </div>
+              <div className="hidden md:flex items-center gap-4">
+                {[
+                  { id: 'headquarters', label: 'HQ', icon: Home },
+                  { id: 'picks', label: 'Picks', icon: Calendar },
+                  { id: 'rankings', label: 'Rankings', icon: Trophy },
+                  { id: 'chase', label: '#TheChase', icon: TrendingUp },
+                  { id: 'live', label: 'Live', icon: Users }
+                ].map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setCurrentPage(id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                      currentPage === id 
+                        ? 'bg-orange-600 text-white' 
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-sm font-semibold">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <MiniHelmet config={{ shell: '#fc440f', facemask: '#fff', stripe: '#000', decal: '⚡' }} />
+              <span className="text-sm font-semibold">Player</span>
+            </div>
+          </div>
+        </div>  
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400">Loading...</div>
+          </div>
+        ) : (pages[currentPage]
+       )}
+     </main>
+
+     {/* Mobile Navigation */}
+     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800">
+       <div className="grid grid-cols-5 gap-1 p-2">
+         {[
+           { id: 'headquarters', icon: Home },
+           { id: 'picks', icon: Calendar },
+           { id: 'rankings', icon: Trophy },
+           { id: 'chase', icon: TrendingUp },
+           { id: 'live', icon: Users }
+         ].map(({ id, icon: Icon }) => (
+           <button
+             key={id}
+             onClick={() => setCurrentPage(id)}
+             className={`p-3 rounded-lg ${
+               currentPage === id 
+                 ? 'bg-orange-600 text-white' 
+                 : 'text-gray-400'
+             }`}
+           >
+             <Icon className="w-5 h-5 mx-auto" />
+           </button>
+         ))}
+       </div>
+     </div>
+   </div>
+ )
+}
