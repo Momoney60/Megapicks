@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Helmet Avatar Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Bebas+Neue&family=Graduate&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="controls" id="controls">
+      <div class="section">
+        <h3>Profile</h3>
+        <label class="row">
+          <span>Username</span>
+          <input id="usernameInput" type="text" placeholder="Your username" maxlength="24">
+        </label>
+        <div class="row two">
+          <button id="saveProfileBtn" type="button">Save</button>
+          <button id="loadProfileBtn" type="button">Load</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Background</h3>
+        <label class="row">
+          <span>Type</span>
+          <select id="bgType">
+            <option value="transparent">Transparent</option>
+            <option value="solid">Solid</option>
+            <option value="gradient">Gradient</option>
+            <option value="badge">Circle Badge</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Color 1</span>
+          <input id="bgColor1" type="color" value="#0b1f2a">
+        </label>
+        <label class="row">
+          <span>Color 2</span>
+          <input id="bgColor2" type="color" value="#0b1f2a">
+        </label>
+      </div>
+
+      <div class="section">
+        <h3>Helmet</h3>
+        <label class="row">
+          <span>Shell</span>
+          <input id="shellColor1" type="color" value="#c41e3a">
+        </label>
+        <label class="row">
+          <span>Gradient</span>
+          <input id="shellUseGradient" type="checkbox" checked>
+        </label>
+        <label class="row">
+          <span>Shell 2</span>
+          <input id="shellColor2" type="color" value="#6a0d21">
+        </label>
+        <label class="row">
+          <span>Grad Angle</span>
+          <input id="shellGradAngle" type="range" min="0" max="180" value="30">
+        </label>
+        <label class="row">
+          <span>Outline</span>
+          <input id="outlineColor" type="color" value="#101418">
+        </label>
+        <label class="row">
+          <span>Outline px</span>
+          <input id="outlineWidth" type="range" min="0" max="10" value="3">
+        </label>
+        <label class="row">
+          <span>Gloss</span>
+          <input id="glossEnabled" type="checkbox" checked>
+        </label>
+        <label class="row">
+          <span>Metal Flake</span>
+          <input id="flakeEnabled" type="checkbox" checked>
+        </label>
+        <label class="row">
+          <span>Flake Amt</span>
+          <input id="flakeDensity" type="range" min="0" max="1" step="0.01" value="0.35">
+        </label>
+      </div>
+
+      <div class="section">
+        <h3>Stripes</h3>
+        <label class="row">
+          <span>Mode</span>
+          <select id="stripeMode">
+            <option value="none">None</option>
+            <option value="single" selected>Single</option>
+            <option value="double">Double</option>
+            <option value="triple">Triple</option>
+          </select>
+        </label>
+        <label class="row"><span>Color 1</span><input id="stripeColor1" type="color" value="#ffffff"></label>
+        <label class="row"><span>Color 2</span><input id="stripeColor2" type="color" value="#000000"></label>
+        <label class="row"><span>Color 3</span><input id="stripeColor3" type="color" value="#ffffff"></label>
+        <label class="row"><span>Angle</span><input id="stripeAngle" type="range" min="-45" max="45" value="-15"></label>
+        <label class="row"><span>Width</span><input id="stripeWidth" type="range" min="2" max="40" value="18"></label>
+        <label class="row"><span>Spacing</span><input id="stripeSpacing" type="range" min="2" max="40" value="10"></label>
+      </div>
+
+      <div class="section">
+        <h3>Decal</h3>
+        <label class="row">
+          <span>Type</span>
+          <select id="decalType">
+            <option value="none">None</option>
+            <option value="star" selected>Star</option>
+            <option value="bolt">Lightning</option>
+            <option value="letter">Letter</option>
+            <option value="upload">Upload</option>
+          </select>
+        </label>
+        <label class="row"><span>Color</span><input id="decalColor" type="color" value="#ffffff"></label>
+        <label class="row"><span>Letter</span><input id="decalLetter" type="text" maxlength="1" value="A"></label>
+        <label class="row"><span>Size</span><input id="decalSize" type="range" min="0.2" max="1.2" step="0.01" value="0.5"></label>
+        <label class="row"><span>X</span><input id="decalX" type="range" min="-0.5" max="0.5" step="0.01" value="0.1"></label>
+        <label class="row"><span>Y</span><input id="decalY" type="range" min="-0.5" max="0.5" step="0.01" value="0.0"></label>
+        <label class="row"><span>Flip</span><input id="decalFlip" type="checkbox"></label>
+        <label class="row"><span>Upload</span><input id="decalUpload" type="file" accept="image/*"></label>
+      </div>
+
+      <div class="section">
+        <h3>Number</h3>
+        <label class="row"><span>Value</span><input id="numValue" type="number" min="0" max="99" value="22"></label>
+        <label class="row"><span>Font</span>
+          <select id="numFont">
+            <option value="varsity" selected>Varsity</option>
+            <option value="block">Block</option>
+            <option value="rounded">Rounded</option>
+          </select>
+        </label>
+        <label class="row"><span>Color</span><input id="numColor" type="color" value="#ffffff"></label>
+        <label class="row"><span>Outline</span><input id="numOutlineColor" type="color" value="#000000"></label>
+        <label class="row"><span>Outline px</span><input id="numOutlineWidth" type="range" min="0" max="8" value="2"></label>
+        <label class="row"><span>X</span><input id="numX" type="range" min="-0.5" max="0.5" step="0.01" value="-0.1"></label>
+        <label class="row"><span>Y</span><input id="numY" type="range" min="-0.5" max="0.5" step="0.01" value="0.15"></label>
+        <label class="row"><span>Scale</span><input id="numScale" type="range" min="0.5" max="1.2" step="0.01" value="0.8"></label>
+      </div>
+
+      <div class="section">
+        <h3>Gear</h3>
+        <label class="row"><span>Facemask</span><input id="maskColor" type="color" value="#333333"></label>
+        <label class="row"><span>Mask Style</span><select id="maskStyle"><option value="standard">Standard</option><option value="cage">Cage</option></select></label>
+        <label class="row"><span>Chinstrap</span><input id="chinColor" type="color" value="#ffffff"></label>
+        <label class="row"><span>Visor</span><input id="visorEnabled" type="checkbox"></label>
+        <label class="row"><span>Visor Tint</span><input id="visorColor" type="color" value="#222222"></label>
+        <label class="row"><span>Visor Op</span><input id="visorOpacity" type="range" min="0" max="1" step="0.01" value="0.35"></label>
+      </div>
+
+      <div class="section">
+        <h3>Effects</h3>
+        <label class="row"><span>Shadow</span><input id="shadowEnabled" type="checkbox" checked></label>
+      </div>
+
+      <div class="section">
+        <div class="row two">
+          <button id="randomizeBtn" type="button">Randomize</button>
+          <button id="resetBtn" type="button">Reset</button>
+        </div>
+        <div class="row two">
+          <button id="exportPngBtn" type="button">Export PNG</button>
+          <button id="copySvgBtn" type="button">Copy SVG</button>
+        </div>
+        <div class="row two">
+          <button id="shareLinkBtn" type="button">Share Link</button>
+          <button id="importJsonBtn" type="button">Import JSON</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-toolbar">
+        <div class="user-badge">@<span id="liveUsername">guest</span></div>
+      </div>
+      <div class="canvas" id="canvas">
+        <svg id="helmetSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%" overflow="visible">
+          <defs>
+            <path id="shellPath" d="M 70 170 C 60 140 80 100 110 80 C 150 50 210 50 250 70 C 290 90 320 130 320 170 C 320 215 290 250 240 260 L 140 260 C 100 250 75 220 70 170 Z" />
+
+            <mask id="shellMask" maskUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="400" height="300" fill="black" />
+              <use href="#shellPath" fill="white" />
+              <rect id="faceOpening" x="285" y="120" width="95" height="95" rx="15" ry="15" fill="black" />
+              <circle id="earHoleCut" cx="200" cy="170" r="16" fill="black" />
+            </mask>
+
+            <clipPath id="shellClip" clipPathUnits="userSpaceOnUse">
+              <use href="#shellPath" />
+            </clipPath>
+
+            <linearGradient id="shellGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#c41e3a" />
+              <stop offset="100%" stop-color="#6a0d21" />
+            </linearGradient>
+
+            <linearGradient id="glossGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55" />
+              <stop offset="50%" stop-color="#ffffff" stop-opacity="0.08" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0" />
+            </linearGradient>
+
+            <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.35" />
+            </filter>
+
+            <pattern id="flakePattern" patternUnits="userSpaceOnUse" width="12" height="12">
+              <rect width="12" height="12" fill="transparent" />
+              <circle cx="3" cy="4" r="0.8" fill="#ffffff" opacity="0.25" />
+              <circle cx="9" cy="2" r="0.6" fill="#ffffff" opacity="0.18" />
+              <circle cx="7" cy="9" r="0.7" fill="#ffffff" opacity="0.2" />
+              <circle cx="2" cy="10" r="0.5" fill="#ffffff" opacity="0.15" />
+            </pattern>
+
+            <g id="facemaskStd" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path d="M 312 150 L 360 150" stroke-width="6" />
+              <path d="M 312 180 C 340 175 352 180 360 190" stroke-width="6" />
+              <path d="M 312 160 C 332 158 346 162 360 170" stroke-width="6" />
+              <path d="M 312 140 C 340 135 360 138 360 138" stroke-width="6" />
+              <path d="M 300 125 L 312 150 L 312 190 L 300 210" stroke-width="6" />
+            </g>
+
+            <g id="facemaskCage" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path d="M 305 135 L 360 135" stroke-width="7" />
+              <path d="M 305 155 L 360 155" stroke-width="7" />
+              <path d="M 305 175 L 360 175" stroke-width="7" />
+              <path d="M 305 195 L 360 195" stroke-width="7" />
+              <path d="M 295 120 L 305 135 L 305 195 L 295 210" stroke-width="7" />
+            </g>
+
+            <g id="vectorStar">
+              <path d="M 0 -50 L 14 -15 L 47 -15 L 19 7 L 29 40 L 0 20 L -29 40 L -19 7 L -47 -15 L -14 -15 Z" />
+            </g>
+            <g id="vectorBolt">
+              <path d="M -15 -50 L 10 -10 L -5 -10 L 20 15 L -2 10 L 0 40 L -25 5 L -8 8 Z" />
+            </g>
+          </defs>
+
+          <g id="backgroundGroup"></g>
+
+          <g id="helmetGroup" filter="url(#dropShadow)">
+            <g id="shellGroup" mask="url(#shellMask)">
+              <use id="shellFill" href="#shellPath" fill="url(#shellGradient)" />
+
+              <g id="stripeGroup">
+                <rect id="stripe1" x="-100" y="-100" width="600" height="18" fill="#ffffff" />
+                <rect id="stripe2" x="-100" y="-100" width="600" height="10" fill="#000000" />
+                <rect id="stripe3" x="-100" y="-100" width="600" height="18" fill="#ffffff" />
+              </g>
+
+              <g id="decalGroup">
+                <g id="decalVector" transform="translate(200,150)">
+                  <use href="#vectorStar" fill="#ffffff" />
+                </g>
+                <image id="decalImage" href="" x="0" y="0" width="0" height="0" visibility="hidden" />
+              </g>
+
+              <g id="numberGroup" font-weight="800" text-anchor="middle" dominant-baseline="middle">
+                <text id="numberText" x="200" y="150" fill="#ffffff" paint-order="stroke" stroke="#000000" stroke-width="2">22</text>
+              </g>
+
+              <rect id="flakeOverlay" x="0" y="0" width="400" height="300" fill="url(#flakePattern)" opacity="0.35" />
+              <use id="glossOverlay" href="#shellPath" fill="url(#glossGradient)" opacity="0.8" />
+            </g>
+
+            <use id="shellOutline" href="#shellPath" fill="none" stroke="#101418" stroke-width="3" />
+            <circle id="earRing" cx="200" cy="170" r="18" fill="none" stroke="#101418" stroke-width="3" />
+
+            <g id="visorGroup" opacity="0.0">
+              <path id="visor" d="M 285 135 C 300 130 330 130 360 138 L 360 150 C 340 145 300 145 285 150 Z" fill="#222222" />
+            </g>
+
+            <g id="facemaskGroup" stroke="#333333">
+              <use id="facemaskUse" href="#facemaskStd" />
+            </g>
+
+            <g id="chinstrapGroup" stroke="#ffffff" fill="none" stroke-linecap="round">
+              <path d="M 295 210 C 270 225 240 230 210 230" stroke-width="4" />
+              <circle cx="295" cy="210" r="3" fill="#ffffff" stroke="none" />
+            </g>
+          </g>
+        </svg>
+      </div>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
